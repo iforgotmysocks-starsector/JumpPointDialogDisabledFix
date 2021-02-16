@@ -459,11 +459,37 @@ public class JumpPointInteractionDialogPluginImpl implements InteractionDialogPl
 			if (jumpPoint.getDestinations().size() == 1) {
 				dialog.setOpacity(0);
 				dialog.setBackgroundDimAmount(0f);
-				optionSelected(null, OptionId.JUMP_1);
+        
+				OptionId selected = OptionId.JUMP_CONFIRM_TURN_TRANSPONDER_ON;
+				beingConfirmed = OptionId.JUMP_1;
+				if (!RequireTransponderOn(beingConfirmed)) selected = OptionId.JUMP_CONFIRM;
+				optionSelected(null, selected);
 			}
 		}
 	}
-	
+
+  private boolean RequireTransponderOn(OptionId destId) {
+    JumpDestination dest = destinationMap.get(destId);
+    SectorEntityToken target = dest.getDestination();
+    CampaignFleetAPI player = Global.getSector().getPlayerFleet();
+    boolean wouldMindTOff = false;
+    if (target != null && target.getContainingLocation() != null && 
+        !target.getContainingLocation().isHyperspace() && !player.isTransponderOn()) {
+
+      for (MarketAPI market : Global.getSector().getEconomy().getMarkets(target.getContainingLocation())) {
+        if (market.isHidden()) continue;
+        if (market.getFaction().isPlayerFaction()) continue;
+        
+        if (!market.getFaction().isHostileTo(Factions.PLAYER) && 
+            !market.isFreePort() &&
+            !market.getFaction().getCustomBoolean(Factions.CUSTOM_ALLOWS_TRANSPONDER_OFF_TRADE)) {
+          wouldMindTOff = true;
+        }
+      }
+    }
+
+    return wouldMindTOff;
+  }
 	
 	protected OptionId lastOptionMousedOver = null;
 	protected float fuelCost;
